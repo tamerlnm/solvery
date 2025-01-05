@@ -70,15 +70,15 @@ func NewPolygonFromStringCoordinates(slice []string) (Polygon, error) {
 	return Polygon{vertices}, nil
 }
 
-func (p *Point) GetDistance(pSecond Point) float64 {
+func (p Point) GetDistance(pSecond Point) float64 {
 	return math.Sqrt(math.Pow(p.X-pSecond.X, 2) + math.Pow(p.Y-pSecond.Y, 2))
 }
 
-func (p *Point) PointInRadius(radius float64) bool {
+func (p Point) PointInRadius(radius float64) bool {
 	return math.Sqrt(p.X*p.X+p.Y*p.Y) <= radius
 }
 
-func (pg *Polygon) PointInPolygon(p Point) bool {
+func (pg Polygon) PointInPolygon(p Point) bool {
 	n := len(pg.Vertices)
 	crossing := false
 	for i := 0; i < n; i++ {
