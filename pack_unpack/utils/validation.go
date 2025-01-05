@@ -10,7 +10,7 @@ func IsValidArgument(s string) bool {
 	}
 
 	for i := 1; i < len(s); i++ {
-		if s[i] >= 48 && s[i] <= '9' && s[i-1] >= 48 && s[i-1] <= '9' {
+		if s[i] >= '0' && s[i] <= '9' && s[i-1] >= '0' && s[i-1] <= '9' {
 			return false
 		}
 	}
