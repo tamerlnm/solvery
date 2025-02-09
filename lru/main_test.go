@@ -1,11 +1,12 @@
 package main
 
 import (
+	"lru/pkg/model"
 	"testing"
 )
 
 func TestLRUCache(t *testing.T) {
-	cache := NewLRUCache(2)
+	cache := model.NewLRUCache(2)
 
 	// Test 1: Добавление первых двух элементов
 	cache.Set(1, 10)
