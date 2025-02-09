@@ -1,12 +1,13 @@
 package main
 
 import (
+	"set/pkg/model"
 	"testing"
 )
 
 func TestUnion(t *testing.T) {
-	set1 := NewSet()
-	set2 := NewSet()
+	set1 := model.NewSet()
+	set2 := model.NewSet()
 
 	set1.Add("a")
 	set1.Add("b")
@@ -25,8 +26,8 @@ func TestUnion(t *testing.T) {
 }
 
 func TestSubtraction(t *testing.T) {
-	set1 := NewSet()
-	set2 := NewSet()
+	set1 := model.NewSet()
+	set2 := model.NewSet()
 
 	set1.Add("a")
 	set1.Add("b")
@@ -45,8 +46,8 @@ func TestSubtraction(t *testing.T) {
 }
 
 func TestIntersection(t *testing.T) {
-	set1 := NewSet()
-	set2 := NewSet()
+	set1 := model.NewSet()
+	set2 := model.NewSet()
 
 	set1.Add("a")
 	set1.Add("b")
