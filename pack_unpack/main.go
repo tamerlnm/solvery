@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -38,22 +39,28 @@ func main() {
 
 func unpackValue(arg string) string {
 	arg, _ = strconv.Unquote(`"` + arg + `"`)
-	result := make([]rune, 0)
+	var builder strings.Builder
+
 	prevRune := rune(0)
 	for _, r := range arg {
 		if r < '0' || r > '9' {
-			result = append(result, r)
+			builder.WriteRune(r)
 			prevRune = r
 			continue
 		}
 
 		n, _ := strconv.Atoi(string(r))
-		if n == 0 && len(result) > 0 {
-			result = result[:len(result)-1]
+		if n == 0 {
+			str := builder.String()
+			if len(str) > 0 {
+				builder.Reset()
+				builder.WriteString(str[:len(str)-1])
+			}
+			continue
 		}
-		utils.AppendToSliceOfRune(&result, prevRune, n)
+		utils.AppendToBuilder(&builder, prevRune, n)
 	}
-	return utils.Format(string(result))
+	return utils.Format(builder.String())
 }
 
 func packValue(arg string) string {
