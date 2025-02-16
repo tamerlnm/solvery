@@ -1,69 +1,62 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"sync"
-	"time"
 )
 
-const (
-	numJobs    = 10
-	numWorkers = 5
-	maxErrors  = 3
-)
+var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 
-func main() {
-	jobs := make(chan int, numJobs)
-	results := make(chan int, numJobs)
-	var mu sync.Mutex
-	errorCount := 0
+type Task func() error
+
+// Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
+func Run(tasks []Task, n, m int) error {
+	if n <= 0 {
+		return errors.New("number of goroutines must be greater than 0")
+	}
 
 	var wg sync.WaitGroup
+	taskCh := make(chan Task, len(tasks))
+	errCh := make(chan struct{}, m)
+	done := make(chan struct{})
 
-	for w := 1; w <= numWorkers; w++ {
+	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go worker(w, jobs, results, &errorCount, &mu, &wg)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case task, ok := <-taskCh:
+					if !ok {
+						return
+					}
+					if err := task(); err != nil {
+						if len(errCh) < m {
+							errCh <- struct{}{}
+						}
+					}
+				case <-done:
+					return
+				}
+			}
+		}()
 	}
 
-	for j := 1; j <= numJobs; j++ {
-		mu.Lock()
-		if errorCount >= maxErrors {
-			mu.Unlock()
-			fmt.Println("Error limit exceeded")
-			break
+	go func() {
+		for _, task := range tasks {
+			if len(errCh) >= m {
+				close(done)
+				break
+			}
+			taskCh <- task
 		}
-		mu.Unlock()
-		jobs <- j
-	}
-	close(jobs)
+		close(taskCh)
+	}()
 
 	wg.Wait()
-	close(results)
 
-	fmt.Println("Processing finished")
-}
-
-func worker(id int, jobs <-chan int, results chan<- int, errorCount *int, mu *sync.Mutex, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for j := range jobs {
-		mu.Lock()
-		if *errorCount >= maxErrors {
-			mu.Unlock()
-			return
-		}
-		mu.Unlock()
-
-		//Симулируем случайную ошибку
-		//if j%2 == 0 {
-		//	fmt.Println("worker", id, "error occurred on job", j)
-		//	mu.Lock()
-		//	*errorCount++
-		//	mu.Unlock()
-		//	continue
-		//}
-
-		fmt.Println("worker", id, "finished job", j)
-		time.Sleep(time.Second)
-		results <- j
+	if len(errCh) >= m {
+		return ErrErrorsLimitExceeded
 	}
+	return nil
 }
