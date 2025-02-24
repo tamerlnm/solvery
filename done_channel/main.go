@@ -11,8 +11,11 @@ func or(channels ...<-chan interface{}) <-chan interface{} {
 	var once sync.Once
 	for _, ch := range channels {
 		go func(c <-chan interface{}) {
-			<-c
-			once.Do(func() { close(out) })
+			select {
+			case <-c:
+				once.Do(func() { close(out) })
+			case <-out:
+			}
 		}(ch)
 	}
 	return out
