@@ -1,8 +1,6 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type (
 	In  = <-chan interface{}
@@ -13,82 +11,41 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
+	if len(stages) == 0 {
+		return nil
+	}
+	safeStage := func(stage Stage, in In) Out {
+		out := make(Bi)
+		go func() {
+			defer close(out)
+			// обработка паники
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("Recovered from panic:", r)
+				}
+			}()
+
+			for {
+				select {
+				case <-done:
+					return
+				case data, ok := <-in:
+					if !ok {
+						return
+					}
+					select {
+					case <-done:
+						return
+					case out <- data:
+					}
+				}
+			}
+		}()
+		return stage(out)
+	}
+	pipeline := in
 	for _, stage := range stages {
-		in = stage(in)
+		pipeline = safeStage(stage, pipeline)
 	}
-	return in
-}
-
-func generateNumbers(done In) In {
-	out := make(Bi)
-	go func() {
-		defer close(out)
-		for i := 1; i <= 5; i++ {
-			select {
-			case out <- i:
-			case <-done:
-				return
-			}
-		}
-	}()
-	return out
-}
-
-func squareNumbers(done In, in In) Out {
-	out := make(Bi)
-	go func() {
-		defer close(out)
-		for sq := range in {
-			select {
-			case out <- sq.(int) * sq.(int):
-			case <-done:
-				return
-			}
-		}
-	}()
-	return out
-}
-
-func doubleNumbers(done In, in In) Out {
-	out := make(Bi)
-	go func() {
-		defer close(out)
-		for db := range in {
-			select {
-			case out <- db.(int) * 2:
-			case <-done:
-				return
-			}
-		}
-	}()
-	return out
-}
-
-func sumNumbers(done In, in In) Out {
-	out := make(Bi)
-	go func() {
-		defer close(out)
-		sum := 0
-		for s := range in {
-			select {
-			case <-done:
-				return
-			default:
-				sum += s.(int)
-			}
-		}
-		out <- sum
-	}()
-	return out
-}
-
-func main() {
-	done := make(Bi)
-	//close(done)
-
-	out := ExecutePipeline(generateNumbers(done), done, func(in In) Out { return squareNumbers(done, in) }, func(in In) Out { return doubleNumbers(done, in) }, func(in In) Out { return sumNumbers(done, in) })
-
-	for v := range out {
-		fmt.Println("Sum of squares doubled:", v)
-	}
+	return pipeline
 }
